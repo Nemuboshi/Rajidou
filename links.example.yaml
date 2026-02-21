@@ -1,0 +1,10 @@
+# YAML config for Rajidou CLI
+links:
+  - "https://radiko.jp/#!/search/timeshift?key=<keywords>"
+  - "https://radiko.jp/#!/ts/<station-id>/<program-id>"
+
+# Optional settings
+outputDir: "downloads"
+# areaId: "JP26"
+# You can look up station-to-area mapping in the original Rajiko project:
+# https://github.com/jackyzy823/rajiko/blob/master/modules/constants.js

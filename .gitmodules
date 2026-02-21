@@ -1,0 +1,4 @@
+[submodule "rajiko"]
+	path = rajiko
+	url = git@github.com:jackyzy823/rajiko.git
+	ignore = all
