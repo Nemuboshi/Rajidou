@@ -4,4 +4,4 @@ downloads/
 .pnpm-store/
 .cache/
 downloads/
-links.yaml
+config.yaml

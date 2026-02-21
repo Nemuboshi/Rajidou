@@ -1,16 +1,10 @@
-import { access, mkdir, readFile } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
 import path from "node:path";
-import { chromium } from "playwright";
 import YAML from "yaml";
 import { Logger } from "./cli/logger.js";
 import { DownloadProgress } from "./cli/progress.js";
 import { downloadFromDetailUrl } from "./core/downloader.js";
 import { resolveToDetailUrl } from "./core/page-resolver.js";
-
-// Hardcoded latest Chrome UA based on current Playwright Chromium version in this environment.
-const HARD_CODED_CHROME_UA =
-  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.7632.6 Safari/537.36";
-const STORAGE_STATE_PATH = path.resolve(".cache", "storage-state.json");
 
 interface ConfigFile {
   links: string[];
@@ -41,63 +35,37 @@ async function main(): Promise<void> {
   const resolvedConfigPath = path.resolve(configPath);
   const config = await loadConfig(resolvedConfigPath);
   const outputDir = path.resolve(config.outputDir ?? "downloads");
+  const failures: Array<{ inputUrl: string; error: string }> = [];
+  let successCount = 0;
+  for (const inputUrl of config.links) {
+    const progress = new DownloadProgress("segments");
+    try {
+      logger.info(`Input: ${inputUrl}`);
+      const detailUrl = await resolveToDetailUrl(inputUrl);
+      logger.info(`Resolved detail: ${detailUrl}`);
 
-  const browser = await chromium.launch({ headless: true });
-  // Reuse persisted Playwright state so the page context is stable across runs.
-  const hasState = await fileExists(STORAGE_STATE_PATH);
-  const context = await browser.newContext(
-    hasState
-      ? {
-          storageState: STORAGE_STATE_PATH,
-          userAgent: HARD_CODED_CHROME_UA,
-        }
-      : { userAgent: HARD_CODED_CHROME_UA },
-  );
-  const page = await context.newPage();
-
-  try {
-    const failures: Array<{ inputUrl: string; error: string }> = [];
-    let successCount = 0;
-    for (const inputUrl of config.links) {
-      const progress = new DownloadProgress("segments");
-      try {
-        logger.info(`Input: ${inputUrl}`);
-        const detailUrl = await resolveToDetailUrl(page, inputUrl);
-        logger.info(`Resolved detail: ${detailUrl}`);
-
-        await page.goto(detailUrl, {
-          waitUntil: "domcontentloaded",
-          timeout: 120_000,
-        });
-        const outputPath = await downloadFromDetailUrl(detailUrl, {
-          outputDir,
-          areaId: config.areaId,
-          onProgress: (done, total) => progress.update(done, total),
-        });
-        progress.stop();
-        logger.success(`Downloaded: ${outputPath}`);
-        successCount += 1;
-      } catch (error) {
-        progress.stop();
-        const message = formatError(error);
-        failures.push({ inputUrl, error: message });
-        logger.failure(`${inputUrl} -> ${message}`);
-      }
-    }
-
-    logger.info(`Completed. success=${successCount} failed=${failures.length}`);
-    if (failures.length > 0) {
-      failures.forEach((item) => {
-        logger.warn(`Failure detail: ${item.inputUrl} :: ${item.error}`);
+      const outputPath = await downloadFromDetailUrl(detailUrl, {
+        outputDir,
+        areaId: config.areaId,
+        onProgress: (done, total) => progress.update(done, total),
       });
-      process.exitCode = 2;
+      progress.stop();
+      logger.success(`Downloaded: ${outputPath}`);
+      successCount += 1;
+    } catch (error) {
+      progress.stop();
+      const message = formatError(error);
+      failures.push({ inputUrl, error: message });
+      logger.failure(`${inputUrl} -> ${message}`);
     }
-  } finally {
-    // Persist state after each run for reuse in the next execution.
-    await mkdir(path.dirname(STORAGE_STATE_PATH), { recursive: true });
-    await context.storageState({ path: STORAGE_STATE_PATH });
-    await context.close();
-    await browser.close();
+  }
+
+  logger.info(`Completed. success=${successCount} failed=${failures.length}`);
+  if (failures.length > 0) {
+    failures.forEach((item) => {
+      logger.warn(`Failure detail: ${item.inputUrl} :: ${item.error}`);
+    });
+    process.exitCode = 2;
   }
 }
 
@@ -133,13 +101,4 @@ function formatError(error: unknown): string {
     }
   }
   return parts.join(" | ");
-}
-
-async function fileExists(filePath: string): Promise<boolean> {
-  try {
-    await access(filePath);
-    return true;
-  } catch {
-    return false;
-  }
 }

@@ -1,7 +1,7 @@
 {
   "name": "rajidou",
   "version": "1.0.0",
-  "description": "Radiko downloader CLI powered by Playwright and Rajiko core logic.",
+  "description": "Radiko downloader CLI powered by Rajiko-derived core logic.",
   "main": "dist/cli.js",
   "scripts": {
     "build": "tsc -p tsconfig.json",
@@ -9,19 +9,12 @@
     "test:watch": "vitest",
     "start": "tsx src/cli.ts"
   },
-  "keywords": [
-    "radiko",
-    "playwright",
-    "cli",
-    "typescript"
-  ],
   "author": "",
   "license": "ISC",
   "type": "module",
   "dependencies": {
     "chalk": "^5.6.2",
     "cli-progress": "^3.12.0",
-    "playwright": "^1.58.2",
     "yaml": "^2.8.2"
   },
   "devDependencies": {

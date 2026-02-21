@@ -1,28 +1,27 @@
-import { readFile } from "node:fs/promises";
-import path from "node:path";
 import { fetchWithRetry } from "./http.js";
+import {
+  RADIKO_APP_ID,
+  RADIKO_APP_KEY_BASE64,
+  RADIKO_APP_VERSION,
+} from "./radiko-app-key.js";
 
 /**
  * Source map in this file:
- * - loadRajikoAppKey: rajiko/modules/static.js (aSmartPhone8_fullkey_b64, APP_VERSION_MAP usage)
+ * - loadRajikoAppKey: built-in app auth constants
  * - genGps: rajiko/modules/util.js (genGPS)
  * - genDeviceInfo: rajiko/modules/util.js (genRandomInfo), adapted
  * - resolveStationAreaId: rajiko/modules/constants.js (radioAreaId behavior), adapted
  */
-const STATIC_FILE = path.resolve("rajiko/modules/static.js");
-let keyMaterialCache:
-  | {
-      appVersion: string;
-      appId: string;
-      appKeyBase64: string;
-    }
-  | undefined;
+interface KeyMaterial {
+  appVersion: string;
+  appId: string;
+  appKeyBase64: string;
+}
+
+let keyMaterialCache: KeyMaterial | undefined;
 
 /**
- * Source: rajiko/modules/static.js
- * Original constants:
- *   - aSmartPhone8_fullkey_b64
- *   - APP_VERSION_MAP
+ * Source: embedded constants derived from rajiko/modules/static.js
  */
 export async function loadRajikoAppKey(): Promise<{
   appVersion: string;
@@ -32,17 +31,10 @@ export async function loadRajikoAppKey(): Promise<{
   if (keyMaterialCache) {
     return keyMaterialCache;
   }
-  const content = await readFile(STATIC_FILE, "utf-8");
-  const keyMatch = content.match(
-    /const aSmartPhone8_fullkey_b64 = "([\s\S]*?)";/,
-  );
-  if (!keyMatch) {
-    throw new Error(`Cannot locate aSmartPhone8_fullkey_b64 in ${STATIC_FILE}`);
-  }
   keyMaterialCache = {
-    appVersion: "8.2.4",
-    appId: "aSmartPhone8",
-    appKeyBase64: keyMatch[1],
+    appVersion: RADIKO_APP_VERSION,
+    appId: RADIKO_APP_ID,
+    appKeyBase64: RADIKO_APP_KEY_BASE64,
   };
   return keyMaterialCache;
 }

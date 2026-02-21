@@ -4,7 +4,7 @@ This project is primarily a TypeScript automation reimplementation of the core i
 
 - Rajiko: <https://github.com/jackyzy823/rajiko>
 
-Most core logic in this repository (auth flow, playlist/chunklist handling, and AAC segment processing) is adapted from Rajiko and then integrated into a Playwright-based CLI automation tool.
+Most core logic in this repository (auth flow, playlist/chunklist handling, and AAC segment processing) is adapted from Rajiko and integrated into this CLI tool.
 
 Respect and thanks to the original Rajiko authors and contributors.
 
@@ -19,13 +19,12 @@ This is a minimal Rajiko CLI that:
 
 ```bash
 pnpm i
-pnpm exec playwright install chromium
 ```
 
 ## Run
 
 ```bash
-pnpm start -- --config links.yaml
+pnpm start -- --config config.yaml
 ```
 
-See links.example.yaml for config.
+See config.example.yaml for config.
