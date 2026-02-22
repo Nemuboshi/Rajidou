@@ -2,7 +2,7 @@
   "name": "rajidou",
   "version": "1.0.0",
   "description": "Radiko downloader CLI powered by Rajiko-derived core logic.",
-  "main": "dist/cli.js",
+  "main": "dist/src/cli.js",
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "test": "vitest run",

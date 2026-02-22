@@ -1,0 +1,70 @@
+name: Release CLI
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            pkg_target: linux
+            bin_ext: ""
+          - os: macos-latest
+            pkg_target: macos
+            bin_ext: ""
+          - os: windows-latest
+            pkg_target: win
+            bin_ext: ".exe"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+          run_install: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build TypeScript
+        run: pnpm build
+
+      - name: Package single-file CLI
+        shell: bash
+        run: |
+          mkdir -p release
+          OUTPUT="release/rajidou-${GITHUB_REF_NAME}-${{ matrix.pkg_target }}-x64${{ matrix.bin_ext }}"
+          pnpm dlx pkg@5 dist/src/cli.js \
+            --targets node18-${{ matrix.pkg_target }}-x64 \
+            --output "${OUTPUT}"
+
+      - name: Upload CI artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: rajidou-${{ github.ref_name }}-${{ matrix.pkg_target }}-x64
+          path: release/*
+          if-no-files-found: error
+
+      - name: Publish to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: release/*
