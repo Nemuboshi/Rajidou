@@ -1,7 +1,8 @@
-node_modules/
-dist/
+﻿dist/
 downloads/
-.pnpm-store/
 .cache/
-downloads/
 config.yaml
+dist/*
+*.exe
+.tmp
+coverage

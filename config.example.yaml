@@ -5,6 +5,8 @@ links:
 
 # Optional settings
 outputDir: "downloads"
+# Parallel jobs for processing multiple links concurrently.
+# jobs: 2
 # areaId: "JP26"
 # You can look up station-to-area mapping in the original Rajiko project:
 # https://github.com/jackyzy823/rajiko/blob/master/modules/constants.js

@@ -1,30 +1,14 @@
-# Rajidou CLI
+﻿# Rajidou CLI
 
-This project is primarily a TypeScript automation reimplementation of the core ideas and workflows from the original Rajiko project:
+Rajidou is a CLI for downloading Radiko timeshift audio.
 
-- Rajiko: <https://github.com/jackyzy823/rajiko>
+This project reimplements core ideas and workflows from the original Rajiko project:
+- Rajiko: https://github.com/jackyzy823/rajiko
 
-Most core logic in this repository (auth flow, playlist/chunklist handling, and AAC segment processing) is adapted from Rajiko and integrated into this CLI tool.
-
-Respect and thanks to the original Rajiko authors and contributors.
-
-This is a minimal Rajiko CLI that:
-
-1. Reads Radiko links from YAML.
-2. Resolves to a detail page.
-3. Fetches timeshift segments.
-
-
-## Install
-
-```bash
-pnpm i
-```
+Core logic in this repository (auth flow, playlist/chunklist handling, and AAC segment processing) is derived from Rajiko behavior and adapted for a standalone CLI.
 
 ## Run
 
-```bash
-pnpm start -- --config config.yaml
-```
+If `--config` is omitted, `config.yaml` is used.
 
-See config.example.yaml for config.
+See `config.example.yaml` for config format.

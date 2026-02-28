@@ -9,58 +9,128 @@ permissions:
   contents: write
 
 jobs:
-  build:
-    name: Build ${{ matrix.os }}
+  verify:
+    name: Verify
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: "stable"
+          check-latest: true
+          cache: true
+          cache-dependency-path: go.sum
+
+      - name: Run tests
+        run: go test ./...
+
+  release:
+    name: Build ${{ matrix.goos }}-${{ matrix.arch_label }}
+    needs: verify
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         include:
           - os: ubuntu-latest
+            goos: linux
+            goarch: amd64
             pkg_target: linux
+            arch_label: x64
+            bin_ext: ""
+          - os: ubuntu-latest
+            goos: linux
+            goarch: arm64
+            pkg_target: linux
+            arch_label: arm64
             bin_ext: ""
           - os: macos-latest
+            goos: darwin
+            goarch: amd64
             pkg_target: macos
+            arch_label: x64
+            bin_ext: ""
+          - os: macos-latest
+            goos: darwin
+            goarch: arm64
+            pkg_target: macos
+            arch_label: arm64
             bin_ext: ""
           - os: windows-latest
+            goos: windows
+            goarch: amd64
             pkg_target: win
+            arch_label: x64
+            bin_ext: ".exe"
+          - os: windows-latest
+            goos: windows
+            goarch: arm64
+            pkg_target: win
+            arch_label: arm64
             bin_ext: ".exe"
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+      - name: Setup Go
+        uses: actions/setup-go@v6
         with:
-          version: 10
-          run_install: false
+          go-version: "stable"
+          check-latest: true
+          cache: true
+          cache-dependency-path: go.sum
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-          cache: "pnpm"
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Build TypeScript
-        run: pnpm build
-
-      - name: Package single-file CLI
+      - name: Build CLI
         shell: bash
         run: |
           mkdir -p release
-          OUTPUT="release/rajidou-${GITHUB_REF_NAME}-${{ matrix.pkg_target }}-x64${{ matrix.bin_ext }}"
-          pnpm dlx pkg@5 dist/src/cli.js \
-            --targets node18-${{ matrix.pkg_target }}-x64 \
-            --output "${OUTPUT}"
+          OUTPUT="release/rajidou-${GITHUB_REF_NAME}-${{ matrix.pkg_target }}-${{ matrix.arch_label }}${{ matrix.bin_ext }}"
+          GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} CGO_ENABLED=0 \
+            go build -trimpath -buildvcs=false -ldflags "-s -w -buildid=" -o "${OUTPUT}" ./cmd/rajidou
+
+      - name: Install UPX
+        shell: bash
+        run: |
+          if command -v upx >/dev/null 2>&1; then
+            upx --version
+            exit 0
+          fi
+
+          case "${{ runner.os }}" in
+            Linux)
+              sudo apt-get update
+              sudo apt-get install -y upx-ucl || sudo apt-get install -y upx
+              ;;
+            macOS)
+              brew install upx
+              ;;
+            Windows)
+              choco install upx -y
+              ;;
+          esac
+
+      - name: Compress with UPX
+        shell: bash
+        run: |
+          OUTPUT="release/rajidou-${GITHUB_REF_NAME}-${{ matrix.pkg_target }}-${{ matrix.arch_label }}${{ matrix.bin_ext }}"
+          CANDIDATE="${OUTPUT}.upx"
+          cp "${OUTPUT}" "${CANDIDATE}"
+          if upx --best --lzma "${CANDIDATE}"; then
+            mv "${CANDIDATE}" "${OUTPUT}"
+            echo "UPX compression succeeded; keeping compressed binary only."
+          else
+            rm -f "${CANDIDATE}"
+            echo "UPX compression failed; keeping original binary."
+          fi
 
       - name: Upload CI artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
-          name: rajidou-${{ github.ref_name }}-${{ matrix.pkg_target }}-x64
+          name: rajidou-${{ github.ref_name }}-${{ matrix.pkg_target }}-${{ matrix.arch_label }}
           path: release/*
           if-no-files-found: error
 
